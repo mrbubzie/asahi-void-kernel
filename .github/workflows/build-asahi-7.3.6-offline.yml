@@ -1,0 +1,53 @@
+name: Build Void Asahi 7.3.6 offline XBPS bundle
+
+on:
+  workflow_dispatch:
+    inputs:
+      libc:
+        description: "Match xbps-uhelper arch on the destination"
+        type: choice
+        options:
+          - glibc
+          - musl
+        default: glibc
+      runner:
+        description: "GitHub Actions runner label (Linux ARM64)"
+        type: string
+        default: ubuntu-24.04-arm
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Build kernel and collect offline dependencies
+        env:
+          VOID_LIBC: ${{ inputs.libc }}
+        run: |
+          test "$(uname -m)" = aarch64
+          mkdir -p output
+          image="ghcr.io/void-linux/void-${VOID_LIBC}-full:latest"
+          docker run --rm --privileged \
+            --mount "type=bind,source=$PWD/asahi-offline-7.3.6,target=/kit,readonly" \
+            --mount "type=bind,source=$PWD/output,target=/output" \
+            -e "VOID_LIBC=$VOID_LIBC" \
+            --entrypoint /bin/sh "$image" -ec '
+              xbps-install -Syu xbps
+              xbps-install -Sy bash
+              exec /bin/bash /kit/build.sh
+            '
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: void-asahi-7.3.6-offline-${{ inputs.libc }}
+          path: output/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
