@@ -35,7 +35,7 @@ jobs:
           mkdir -p output
           image="ghcr.io/void-linux/void-${VOID_LIBC}-full:latest"
           docker run --rm --privileged \
-            --mount "type=bind,source=$PWD/asahi-offline-7.3.6,target=/kit,readonly" \
+            --mount "type=bind,source=$PWD/asahi-offline,target=/kit,readonly" \
             --mount "type=bind,source=$PWD/output,target=/output" \
             -e "VOID_LIBC=$VOID_LIBC" \
             --entrypoint /bin/sh "$image" -ec '
